@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+/*
+ * Theme tokens. Values below are the DARK theme (default, unchanged from
+ * before). Light theme values live in the `[data-theme="light"]` override
+ * block further down and simply replace these CSS custom properties -
+ * Tailwind's generated utilities (bg-surface, text-text, etc.) reference
+ * `var(--color-*)`, so no component classes need to change per theme.
+ */
+@theme {
+  --color-bg: #0a0e1a;
+  --color-surface: #10162a;
+  --color-surface-hover: #161d35;
+  --color-border: #232b45;
+  --color-text: #e2e6f0;
+  --color-text-muted: #8b93ab;
+
+  --color-accent: #3b82f6;
+  --color-accent-soft: #1d2b4d;
+
+  /* Sidebar keeps its own tokens because it stays a branded dark-blue panel
+     in both themes, while the rest of the UI switches - see light overrides. */
+  --color-sidebar-bg: #10162a;
+  --color-sidebar-hover: #161d35;
+  --color-sidebar-border: #232b45;
+  --color-sidebar-text: #e2e6f0;
+  --color-sidebar-text-muted: #8b93ab;
+  --color-sidebar-accent-text: #3b82f6;
+  --color-sidebar-active-bg: #1d2b4d;
+  --color-sidebar-active-text: #3b82f6;
+
+  --color-critical: #ef4444;
+  --color-critical-soft: rgba(239, 68, 68, 0.15);
+  --color-high: #f97316;
+  --color-high-soft: rgba(249, 115, 22, 0.15);
+  --color-medium: #eab308;
+  --color-medium-soft: rgba(234, 179, 8, 0.15);
+  --color-low: #22c55e;
+  --color-low-soft: rgba(34, 197, 94, 0.15);
+}
+
+:root[data-theme="light"] {
+  --color-bg: #d0e2f2;
+  --color-surface: #ffffff;
+  --color-surface-hover: #eef5fc;
+  --color-border: #c9dcee;
+  --color-text: #1e2a3a;
+  --color-text-muted: #5b6b85;
+
+  --color-accent: #3b5b8a;
+  --color-accent-soft: #e1ebf6;
+
+  --color-sidebar-bg: #3b5b8a;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --color-sidebar-border: rgba(255, 255, 255, 0.1);
+  --color-sidebar-text: #eaf1fb;
+  --color-sidebar-text-muted: #b7c9e2;
+  --color-sidebar-accent-text: #bfe0ff;
+  --color-sidebar-active-bg: rgba(255, 255, 255, 0.16);
+  --color-sidebar-active-text: #ffffff;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 6px;
+}
+
+.leaflet-container {
+  background: var(--color-surface) !important;
+}
