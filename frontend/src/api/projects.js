@@ -15,3 +15,11 @@ export const getCostPrediction = (projectId) =>
 
 export const getRiskDrivers = (projectId) =>
   request({ url: `/projects/${projectId}/risk-drivers` });
+
+export const getProgress = (projectId) => request({ url: `/projects/${projectId}/progress` });
+
+export const getCostHistory = (projectId) => request({ url: `/projects/${projectId}/cost-history` });
+
+export const getTimeline = (projectId) => request({ url: `/projects/${projectId}/timeline` });
+
+export const getBenchmark = (projectId) => request({ url: `/projects/${projectId}/benchmark` });

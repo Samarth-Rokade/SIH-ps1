@@ -25,6 +25,7 @@ SORTABLE_COLUMNS = {
     "original_cost_crore": Project.original_cost_crore,
     "current_cost_crore": Project.current_cost_crore,
     "project_name": Project.project_name,
+    "predicted_delay_months": ProjectPrediction.predicted_delay_months,
 }
 
 

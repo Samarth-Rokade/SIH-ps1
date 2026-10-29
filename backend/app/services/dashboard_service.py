@@ -58,24 +58,32 @@ def get_overview(db: Session) -> DashboardOverview:
 
 
 def get_risk_map(db: Session, risk_level: str | None) -> list[RiskMapPoint]:
-    query = db.query(Project, ProjectPrediction).join(
-        ProjectPrediction, Project.project_id == ProjectPrediction.project_id
-    )
+    # Column-only query (no ORM entities): this returns every project, so row
+    # construction cost dominates.
+    query = db.query(
+        Project.project_id,
+        Project.project_name,
+        Project.state,
+        Project.latitude,
+        Project.longitude,
+        ProjectPrediction.risk_score,
+        ProjectPrediction.risk_level,
+        ProjectPrediction.delay_probability,
+    ).join(ProjectPrediction, Project.project_id == ProjectPrediction.project_id)
     if risk_level and risk_level != "all":
         query = query.filter(ProjectPrediction.risk_level == risk_level)
-
     return [
         RiskMapPoint(
-            project_id=project.project_id,
-            project_name=project.project_name,
-            state=project.state,
-            latitude=project.latitude,
-            longitude=project.longitude,
-            risk_score=prediction.risk_score,
-            risk_level=prediction.risk_level,
-            delay_probability=prediction.delay_probability,
+            project_id=pid,
+            project_name=name,
+            state=state,
+            latitude=lat,
+            longitude=lon,
+            risk_score=score,
+            risk_level=level,
+            delay_probability=delay,
         )
-        for project, prediction in query.all()
+        for pid, name, state, lat, lon, score, level, delay in query.all()
     ]
 
 

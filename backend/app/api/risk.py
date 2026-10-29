@@ -26,3 +26,8 @@ def radar(
 @router.get("/summary")
 def summary(db: Session = Depends(get_db)):
     return success(risk_service.get_summary(db).model_dump(mode="json"))
+
+
+@router.get("/filters")
+def filters(db: Session = Depends(get_db)):
+    return success(risk_service.get_filter_options(db))

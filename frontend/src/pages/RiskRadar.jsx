@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { getPriorityProjects } from "../api/dashboard";
-import { getRadar, getSummary } from "../api/risk";
+import { getFilterOptions, getRadar, getSummary } from "../api/risk";
 import ErrorState from "../components/common/ErrorState";
 import LoadingState from "../components/common/LoadingState";
 import RiskBadge from "../components/common/RiskBadge";
@@ -10,26 +10,25 @@ import Topbar from "../components/layout/Topbar";
 import { useApiData } from "../hooks/useApiData";
 import { RISK_LEVELS } from "../utils/riskColors";
 
-const EMPTY_FILTERS = { sector: "", state: "", risk_level: "" };
+const EMPTY_FILTERS = { ministry: "", sector: "", state: "", risk_level: "" };
+// Above the dataset size so the radar always shows every matching project (the canvas chart handles it).
+const RADAR_LIMIT = 5000;
 
 export default function RiskRadar() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState(EMPTY_FILTERS);
 
-  const radar = useApiData(() => getRadar(filters), [filters.sector, filters.state, filters.risk_level]);
+  const radar = useApiData(
+    () => getRadar(filters, RADAR_LIMIT),
+    [filters.ministry, filters.sector, filters.state, filters.risk_level]
+  );
   const summary = useApiData(getSummary, []);
   const priority = useApiData(() => getPriorityProjects(10), []);
 
-  // Filter dropdown options derived once from the (currently unfiltered-by-these-fields) dataset.
-  const allSectors = useApiData(() => getRadar({}), []);
-  const sectorOptions = useMemo(
-    () => [...new Set((allSectors.data ?? []).map((p) => p.sector))].sort(),
-    [allSectors.data]
-  );
-  const stateOptions = useMemo(
-    () => [...new Set((allSectors.data ?? []).map((p) => p.state))].sort(),
-    [allSectors.data]
-  );
+  const filterOptions = useApiData(getFilterOptions, []);
+  const sectorOptions = filterOptions.data?.sectors ?? [];
+  const stateOptions = filterOptions.data?.states ?? [];
+  const ministryOptions = filterOptions.data?.ministries ?? [];
 
   const clusters = useMemo(() => {
     const points = radar.data ?? [];
@@ -58,10 +57,13 @@ export default function RiskRadar() {
         <div className="lg:col-span-3">
           <div className="rounded-xl border border-border bg-surface p-4">
             <h2 className="mb-3 text-sm font-semibold">Project Risk Radar</h2>
-            {radar.loading && <LoadingState />}
             {radar.error && <ErrorState error={radar.error} onRetry={radar.refetch} />}
+            {!radar.data && radar.loading && <LoadingState />}
             {radar.data && (
-              <RiskRadarScatter points={radar.data} onSelect={(id) => navigate(`/projects/${id}`)} />
+              // Keep the previous plot visible (dimmed) while a filter change refetches.
+              <div className={radar.loading ? "opacity-50 transition-opacity" : "transition-opacity"}>
+                <RiskRadarScatter points={radar.data} onSelect={(id) => navigate(`/projects/${id}`)} />
+              </div>
             )}
           </div>
 
@@ -80,7 +82,7 @@ export default function RiskRadar() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {priority.data.map((p) => (
+                  {(priority.data ?? []).map((p) => (
                     <tr
                       key={p.project_id}
                       onClick={() => navigate(`/projects/${p.project_id}`)}
@@ -104,6 +106,12 @@ export default function RiskRadar() {
           <div className="rounded-xl border border-border bg-surface p-4">
             <h2 className="mb-3 text-sm font-semibold">Filters</h2>
             <div className="space-y-3 text-sm">
+              <FilterSelect
+                label="Ministry"
+                value={filters.ministry}
+                options={ministryOptions}
+                onChange={(v) => setFilters((f) => ({ ...f, ministry: v }))}
+              />
               <FilterSelect
                 label="Sector"
                 value={filters.sector}
@@ -133,7 +141,9 @@ export default function RiskRadar() {
 
           <div className="rounded-xl border border-border bg-surface p-4">
             <h2 className="mb-3 text-sm font-semibold">Risk Summary</h2>
-            {summary.loading ? (
+            {summary.error ? (
+              <ErrorState error={summary.error} onRetry={summary.refetch} />
+            ) : summary.loading || !summary.data ? (
               <LoadingState />
             ) : (
               <div className="space-y-2 text-sm">

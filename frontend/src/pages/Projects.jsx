@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { listProjects } from "../api/projects";
+import { getFilterOptions } from "../api/risk";
 import ErrorState from "../components/common/ErrorState";
 import LoadingState from "../components/common/LoadingState";
 import Pagination from "../components/common/Pagination";
 import RiskBadge from "../components/common/RiskBadge";
 import Topbar from "../components/layout/Topbar";
 import { useApiData } from "../hooks/useApiData";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { RISK_LEVELS } from "../utils/riskColors";
 
 const PAGE_SIZE = 20;
@@ -14,24 +16,28 @@ const EMPTY_FILTERS = { search: "", ministry: "", sector: "", state: "", risk_le
 
 export default function Projects() {
   const navigate = useNavigate();
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  // Deep links (e.g. /projects?sector=Railways&risk_level=critical) seed the filters.
+  const [searchParams] = useSearchParams();
+  const [filters, setFilters] = useState(() => ({
+    ...EMPTY_FILTERS,
+    ...Object.fromEntries(Object.keys(EMPTY_FILTERS).map((k) => [k, searchParams.get(k) ?? ""])),
+  }));
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState({ sort_by: "risk_score", sort_order: "desc" });
 
-  const params = { ...filters, page, page_size: PAGE_SIZE, ...sort };
+  const debouncedSearch = useDebouncedValue(filters.search.trim(), 300);
+  const params = { ...filters, search: debouncedSearch, page, page_size: PAGE_SIZE, ...sort };
   const list = useApiData(() => listProjects(params), [JSON.stringify(params)]);
 
-  // Fetch the full dataset once (small enough - a few thousand rows) so
-  // filter dropdowns reflect every ministry/sector/state, not a biased sample.
-  const optionsSource = useApiData(() => listProjects({ page: 1, page_size: 4000 }), []);
-  const options = useMemo(() => {
-    const rows = optionsSource.data ?? [];
-    return {
-      ministry: [...new Set(rows.map((r) => r.ministry))].sort(),
-      sector: [...new Set(rows.map((r) => r.sector))].sort(),
-      state: [...new Set(rows.map((r) => r.state))].sort(),
-    };
-  }, [optionsSource.data]);
+  const filterOptions = useApiData(getFilterOptions, []);
+  const options = useMemo(
+    () => ({
+      ministry: filterOptions.data?.ministries ?? [],
+      sector: filterOptions.data?.sectors ?? [],
+      state: filterOptions.data?.states ?? [],
+    }),
+    [filterOptions.data]
+  );
 
   function updateFilter(key, value) {
     setPage(1);
@@ -53,7 +59,7 @@ export default function Projects() {
     { key: "current_cost_crore", label: "Cost (Cr)", sortable: true },
     { key: "physical_progress", label: "Progress", sortable: true },
     { key: "risk_score", label: "Risk", sortable: true },
-    { key: "predicted_delay_months", label: "Delay", sortable: false },
+    { key: "predicted_delay_months", label: "Delay", sortable: true },
   ];
 
   return (

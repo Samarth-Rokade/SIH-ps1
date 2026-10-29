@@ -1,5 +1,19 @@
 import { useNavigate, useParams } from "react-router";
-import { getCostPrediction, getDelayPrediction, getProject, getProjectRisk, getRiskDrivers } from "../api/projects";
+import {
+  getBenchmark,
+  getCostHistory,
+  getCostPrediction,
+  getDelayPrediction,
+  getProgress,
+  getProject,
+  getProjectRisk,
+  getRiskDrivers,
+  getTimeline,
+} from "../api/projects";
+import CostHistoryChart from "../components/charts/CostHistoryChart";
+import ProgressChart from "../components/charts/ProgressChart";
+import BenchmarkCard from "../components/project/BenchmarkCard";
+import ProjectTimeline from "../components/project/ProjectTimeline";
 import ErrorState from "../components/common/ErrorState";
 import LoadingState from "../components/common/LoadingState";
 import RiskBadge from "../components/common/RiskBadge";
@@ -15,6 +29,10 @@ export default function ProjectDetail() {
   const delay = useApiData(() => getDelayPrediction(projectId), [projectId]);
   const cost = useApiData(() => getCostPrediction(projectId), [projectId]);
   const drivers = useApiData(() => getRiskDrivers(projectId), [projectId]);
+  const progress = useApiData(() => getProgress(projectId), [projectId]);
+  const costHistory = useApiData(() => getCostHistory(projectId), [projectId]);
+  const timeline = useApiData(() => getTimeline(projectId), [projectId]);
+  const benchmark = useApiData(() => getBenchmark(projectId), [projectId]);
 
   if (project.loading) return <LoadingState label="Loading project..." />;
   if (project.error) return <ErrorState error={project.error} onRetry={project.refetch} />;
@@ -38,6 +56,17 @@ export default function ProjectDetail() {
             <Tag>{p.project_id}</Tag>
             <Tag>{p.status}</Tag>
           </div>
+        </div>
+        <div className="flex flex-wrap gap-2 self-center">
+          <ActionButton onClick={() => navigate(`/simulator?project=${projectId}`)}>What-if Simulator</ActionButton>
+          <ActionButton onClick={() => navigate(`/reports?project=${projectId}`)}>Generate Report</ActionButton>
+          <ActionButton
+            onClick={() =>
+              navigate(`/assistant?project=${projectId}&q=${encodeURIComponent(`Why is ${p.project_name} high risk?`)}`)
+            }
+          >
+            Ask AI Assistant
+          </ActionButton>
         </div>
         {risk.data && (
           <div className="text-right">
@@ -105,6 +134,15 @@ export default function ProjectDetail() {
         </div>
       </div>
 
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Panel title="Progress: Planned vs Actual" note="Modeled history ending at the current reported progress">
+          <AsyncBody state={progress}>{(data) => <ProgressChart points={data} />}</AsyncBody>
+        </Panel>
+        <Panel title="Cost History" note="Modeled history ending at the current reported cost and expenditure">
+          <AsyncBody state={costHistory}>{(data) => <CostHistoryChart points={data} />}</AsyncBody>
+        </Panel>
+      </div>
+
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-xl border border-border bg-surface p-5 lg:col-span-2">
           <h2 className="mb-3 text-sm font-semibold">Risk Drivers (Top {drivers.data?.drivers.length ?? 5})</h2>
@@ -144,7 +182,43 @@ export default function ProjectDetail() {
           </div>
         </div>
       </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Panel title="Project Timeline">
+          <AsyncBody state={timeline}>{(data) => <ProjectTimeline timeline={data} />}</AsyncBody>
+        </Panel>
+        <Panel title="Peer Benchmark">
+          <AsyncBody state={benchmark}>{(data) => <BenchmarkCard benchmark={data} />}</AsyncBody>
+        </Panel>
+      </div>
     </div>
+  );
+}
+
+function Panel({ title, note, children }) {
+  return (
+    <div className="rounded-xl border border-border bg-surface p-5">
+      <h2 className="text-sm font-semibold">{title}</h2>
+      {note ? <p className="mb-3 text-[11px] text-text-muted">{note}</p> : <div className="mb-3" />}
+      {children}
+    </div>
+  );
+}
+
+function AsyncBody({ state, children }) {
+  if (state.loading) return <LoadingState />;
+  if (state.error) return <ErrorState error={state.error} onRetry={state.refetch} />;
+  return children(state.data);
+}
+
+function ActionButton({ onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover"
+    >
+      {children}
+    </button>
   );
 }
 

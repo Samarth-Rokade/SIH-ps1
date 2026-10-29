@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
-from app.services import project_service
+from app.services import history_service, project_service
 from app.utils.response import ApiError, success
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -74,3 +74,31 @@ def get_risk_drivers(project_id: str, db: Session = Depends(get_db)):
     if drivers is None:
         raise ApiError(404, "PROJECT_NOT_FOUND", f"Project with ID {project_id} was not found")
     return success(drivers.model_dump(mode="json"))
+
+
+def _or_404(result, project_id: str):
+    if result is None:
+        raise ApiError(404, "PROJECT_NOT_FOUND", f"Project with ID {project_id} was not found")
+    return result
+
+
+@router.get("/{project_id}/progress")
+def get_progress(project_id: str, db: Session = Depends(get_db)):
+    points = _or_404(history_service.get_progress(db, project_id), project_id)
+    return success([p.model_dump(mode="json") for p in points], meta={"modeled": True})
+
+
+@router.get("/{project_id}/cost-history")
+def get_cost_history(project_id: str, db: Session = Depends(get_db)):
+    points = _or_404(history_service.get_cost_history(db, project_id), project_id)
+    return success([p.model_dump(mode="json") for p in points], meta={"modeled": True})
+
+
+@router.get("/{project_id}/timeline")
+def get_timeline(project_id: str, db: Session = Depends(get_db)):
+    return success(_or_404(history_service.get_timeline(db, project_id), project_id).model_dump(mode="json"))
+
+
+@router.get("/{project_id}/benchmark")
+def get_benchmark(project_id: str, db: Session = Depends(get_db)):
+    return success(_or_404(history_service.get_benchmark(db, project_id), project_id).model_dump(mode="json"))

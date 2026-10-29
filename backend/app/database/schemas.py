@@ -171,6 +171,7 @@ class AlertListItem(BaseModel):
     alert_type: str
     message: str
     detected_at: date
+    status: Literal["new", "acknowledged", "resolved"] = "new"
 
 
 class AlertDetail(BaseModel):
@@ -181,6 +182,7 @@ class AlertDetail(BaseModel):
     title: str
     description: str
     detected_at: date
+    status: Literal["new", "acknowledged", "resolved"] = "new"
     risk_before: float
     risk_current: float
     recommended_review: str
@@ -196,3 +198,216 @@ class AlertSummary(BaseModel):
 
 class AlertUpdateRequest(BaseModel):
     status: Literal["new", "acknowledged", "resolved"]
+
+
+class AlertUpdateResult(BaseModel):
+    alert_id: str
+    status: Literal["new", "acknowledged", "resolved"]
+
+
+# --- Project intelligence (history / timeline / benchmark) -------------------
+
+
+class ProgressPoint(BaseModel):
+    month: str
+    planned_progress: float
+    actual_progress: float
+
+
+class CostHistoryPoint(BaseModel):
+    month: str
+    original_cost: float
+    current_cost: float
+    expenditure: float
+
+
+class TimelineEvent(BaseModel):
+    name: str
+    date: date
+    status: Literal["completed", "delayed", "upcoming", "predicted"]
+
+
+class ProjectTimeline(BaseModel):
+    start_date: date
+    planned_end_date: date
+    predicted_end_date: date
+    events: list[TimelineEvent]
+
+
+class BenchmarkProject(BaseModel):
+    risk: float
+    progress: float
+    expenditure_percentage: float
+
+
+class BenchmarkPeers(BaseModel):
+    count: int
+    average_risk: float
+    average_progress: float
+    average_expenditure_percentage: float
+    basis: str
+
+
+class BenchmarkComparison(BaseModel):
+    risk_difference: float
+    progress_difference: float
+    expenditure_difference: float
+
+
+class ProjectBenchmark(BaseModel):
+    project: BenchmarkProject
+    similar_projects: BenchmarkPeers
+    comparison: BenchmarkComparison
+
+
+# --- Analytics ----------------------------------------------------------------
+
+
+class MinistryAnalytics(BaseModel):
+    ministry: str
+    projects: int
+    average_risk: float
+    high_risk_percentage: float
+    average_delay_months: float
+    cost_escalation_percentage: float
+
+
+class SectorAnalytics(BaseModel):
+    sector: str
+    projects: int
+    average_risk: float
+    high_risk_percentage: float
+
+
+class StateAnalytics(BaseModel):
+    state: str
+    projects: int
+    average_risk: float
+    critical_projects: int
+
+
+class CostSectorBreakdown(BaseModel):
+    sector: str
+    original_cost_crore: float
+    current_cost_crore: float
+    predicted_final_cost_crore: float
+
+
+class CostExposureProject(BaseModel):
+    project_id: str
+    project_name: str
+    sector: str
+    ministry: str
+    current_cost_crore: float
+    predicted_final_cost_crore: float
+    additional_exposure_crore: float
+    expected_escalation_percentage: float
+
+
+class CostAnalytics(BaseModel):
+    total_original_cost_crore: float
+    total_current_cost_crore: float
+    total_expenditure_crore: float
+    total_predicted_final_cost_crore: float
+    average_escalation_percentage: float
+    projects_with_escalation: int
+    by_sector: list[CostSectorBreakdown]
+    top_exposure_projects: list[CostExposureProject]
+
+
+# --- What-if simulator -----------------------------------------------------------
+
+
+class SliderParameter(BaseModel):
+    current: float
+    min: float
+    max: float
+
+
+class MilestoneRecoveryOptions(BaseModel):
+    options: list[str]
+    current: str = "none"
+
+
+class SimulatorParameters(BaseModel):
+    project_id: str
+    project_name: str
+    physical_progress: SliderParameter
+    expenditure_percentage: SliderParameter
+    milestone_recovery: MilestoneRecoveryOptions
+
+
+class SimulatorRequest(BaseModel):
+    project_id: str
+    physical_progress: float | None = None
+    expenditure_percentage: float | None = None
+    # The API spec's example names this field `monthly_expenditure`; accept it as
+    # an alias for the expenditure percentage so either request shape works.
+    monthly_expenditure: float | None = None
+    milestone_recovery: Literal["none", "low", "medium", "high"] = "none"
+
+
+class SimulationOutcome(BaseModel):
+    risk_score: float
+    risk_level: RiskLevel
+    delay_probability: float
+    predicted_delay_months: int
+    predicted_cost_crore: float
+
+
+class SimulationChange(BaseModel):
+    risk_reduction: float
+    delay_reduction_months: int
+    cost_reduction_crore: float
+
+
+class SimulationResult(BaseModel):
+    project_id: str
+    project_name: str
+    baseline: SimulationOutcome
+    simulation: SimulationOutcome
+    change: SimulationChange
+    disclaimer: str
+
+
+# --- AI assistant ---------------------------------------------------------------
+
+
+class AssistantRequest(BaseModel):
+    message: str
+    conversation_id: str | None = None
+    # Optional focus project (e.g. when asked from a project's page).
+    project_id: str | None = None
+
+
+class AssistantSource(BaseModel):
+    project_id: str
+    project_name: str
+
+
+class AssistantResponse(BaseModel):
+    conversation_id: str
+    answer: str
+    sources: list[AssistantSource]
+    engine: str
+
+
+# --- Reports ------------------------------------------------------------------------
+
+
+class ReportRequest(BaseModel):
+    format: Literal["pdf"] = "pdf"
+
+
+class DashboardReportRequest(BaseModel):
+    month: str | None = None
+    format: Literal["pdf"] = "pdf"
+
+
+class ReportInfo(BaseModel):
+    report_id: str
+    kind: Literal["project", "dashboard"]
+    title: str
+    status: str
+    created_at: str
+    download_url: str

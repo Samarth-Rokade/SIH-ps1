@@ -15,9 +15,17 @@ def get_radar(
     risk_level: str | None,
     limit: int,
 ) -> list[RiskRadarPoint]:
-    query = db.query(Project, ProjectPrediction).join(
-        ProjectPrediction, Project.project_id == ProjectPrediction.project_id
-    )
+    # Column-only query: building full ORM entities for thousands of rows is the
+    # slow part of this endpoint, and the radar needs just these fields.
+    query = db.query(
+        Project.project_id,
+        Project.project_name,
+        ProjectPrediction.risk_score,
+        ProjectPrediction.delay_probability,
+        ProjectPrediction.cost_overrun_probability,
+        Project.sector,
+        Project.state,
+    ).join(ProjectPrediction, Project.project_id == ProjectPrediction.project_id)
     if ministry:
         query = query.filter(Project.ministry == ministry)
     if sector:
@@ -26,20 +34,32 @@ def get_radar(
         query = query.filter(Project.state == state)
     if risk_level:
         query = query.filter(ProjectPrediction.risk_level == risk_level)
-
     rows = query.order_by(ProjectPrediction.risk_score.desc()).limit(limit).all()
     return [
         RiskRadarPoint(
-            project_id=project.project_id,
-            project_name=project.project_name,
-            risk_score=prediction.risk_score,
-            delay_probability=prediction.delay_probability,
-            cost_risk=prediction.cost_overrun_probability,
-            sector=project.sector,
-            state=project.state,
+            project_id=pid,
+            project_name=name,
+            risk_score=score,
+            delay_probability=delay,
+            cost_risk=cost,
+            sector=sector_name,
+            state=state_name,
         )
-        for project, prediction in rows
+        for pid, name, score, delay, cost, sector_name, state_name in rows
     ]
+
+
+def get_filter_options(db: Session) -> dict[str, list[str]]:
+    """Distinct values for the filter dropdowns (avoids fetching every radar point just to list them)."""
+
+    def distinct(column) -> list[str]:
+        return sorted(v for (v,) in db.query(column).distinct().all())
+
+    return {
+        "sectors": distinct(Project.sector),
+        "states": distinct(Project.state),
+        "ministries": distinct(Project.ministry),
+    }
 
 
 def get_summary(db: Session) -> RiskSummary:

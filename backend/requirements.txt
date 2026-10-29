@@ -1,6 +1,7 @@
 annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.14.2
+charset-normalizer==3.5.2
 click==8.5.0
 cloudpickle==3.1.2
 colorama==0.4.6
@@ -16,9 +17,11 @@ numba==0.67.0
 numpy==2.5.2
 packaging==26.3
 pandas==3.0.5
+pillow==13.0.0
 pydantic==2.13.5
 pydantic_core==2.46.5
 python-dateutil==2.9.0.post0
+reportlab==5.1.0
 scikit-learn==1.9.0
 scipy==1.18.1
 shap==0.52.0

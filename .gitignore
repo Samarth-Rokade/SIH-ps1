@@ -1,0 +1,9 @@
+# Python bytecode (also covered by backend/.gitignore; ml/ and data/ live outside it)
+__pycache__/
+*.py[cod]
+
+# Local logs and OS files
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
